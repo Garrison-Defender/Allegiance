@@ -183,7 +183,7 @@ HRESULT     CshipIGC::Initialize(ImissionIGC* pMission, Time now, const void* da
     ReInitialize(dataShip, now);
     pMission->AddShip(this);
 
-    m_dtCheckRunaway = 31.0f;
+    //m_dtCheckRunaway = 31.0f;
     m_timeLastComplaint = now;
     m_timeLastMineExplosion = now;
     m_timeRanAway = now;
@@ -1711,9 +1711,9 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
             }
 
         // Do we need to run away?
-        if (m_pilotType < c_ptPlayer && m_pilotType != c_ptCarrier && (!fRipcordActive() || m_bRunningAway))      //Carriers never run //TurkeyXIII added ripcord 7/10 - Imago
-        {
-            if (m_timeRanAway + m_dtCheckRunaway <= timeStop)
+		if (m_pilotType < c_ptPlayer && m_pilotType != c_ptCarrier && !fRipcordActive())      //Carriers never run //TurkeyXIII added ripcord 7/10 - Imago
+		{
+			if (m_timeRanAway + c_dtCheckRunaway <= timeStop)
             {
                 bool    bDamage = true;
                 bool    bRunAway = true;
@@ -1770,105 +1770,87 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                     else
                         bRunAway = false;
                 }
-                else
-                {
-                    // assert (m_pilotType == c_ptMiner);
+				else
+				{
+					// assert (m_pilotType == c_ptMiner);
 					// we are expecting a miner at this stage
 					// mmf replaced assert with log msg to track down what is triggering it
 					//     recent logs (07/04/2007) show that the pilot type is 1 and it is a Recon or Rescue ship
 					//     so don't log if it is a 1 now
-					if ( ! (m_pilotType == c_ptMiner) ) {
+					if (!(m_pilotType == c_ptMiner)) {
 						if (m_pilotType != 1) {
-						  debugf ("mmf shipIGC.cpp assert (m_pilotType == c_ptMiner), m_pilotType = %d\n",
-					              m_pilotType);
+							debugf("mmf shipIGC.cpp assert (m_pilotType == c_ptMiner), m_pilotType = %d\n",
+								m_pilotType);
 						}
 					}
-                    if (m_fraction >= 0.95f || (!m_bRunningAway && m_fraction >= m_fractionLastOrder && m_fraction > 0.5f)) // barely damaged or not more damaged than previously
-                    {
-                        IshieldIGC* pshield = (IshieldIGC*)(m_mountedOthers[ET_Shield]);
-                        if ((pshield == NULL) || (pshield->GetFraction() >= 0.75f))
-                        {
-                            bDamage = false;
+					if (m_fraction >= 0.95f)  // mmf added Your_Persona's change, allow Miners to be slightly damaged  (was == 100.0f)
+					{
+						IshieldIGC* pshield = (IshieldIGC*)(m_mountedOthers[ET_Shield]);
+						if ((pshield == NULL) || (pshield->GetFraction() >= 0.75f))
+						{
+							bDamage = false;
 
-                            bRunAway = false; //Never run away if not damaged sufficiently
+							//full hull & shield
+							//Does anyone see us?
+							IsideIGC*       psideMe = GetSide();
 
-                            // 95% hull & 75% shield
-                            /*//Does anyone see us? Run due to enemy threat.
-                            IsideIGC*       psideMe = GetSide();
+							int     cEnemy = 0;
+							int     cFriend = 0;
+							float   d2Enemy = FLT_MAX;
+							float   d2Friend = FLT_MAX;
 
-                            int     cEnemy = 0;
-                            int     cFriend = 0;
-                            float   d2Enemy = FLT_MAX;
-                            float   d2Friend = FLT_MAX;
-                            bool    enemyBasicScout = false;
+							for (ShipLinkIGC* psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next())
+							{
+								IshipIGC*   pship = psl->data();
+								if ((pship->GetPilotType() >= c_ptPlayer) &&
+									(pship->GetParentShip() == NULL) &&
+									!pship->GetBaseHullType()->HasCapability(c_habmLifepod))
+								{
+									IsideIGC*   pside = pship->GetSide();
 
-                            for (ShipLinkIGC*   psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next())
-                            {
-                                IshipIGC*   pship = psl->data();
-                                if ((pship->GetPilotType() >= c_ptPlayer) &&
-                                    (pship->GetParentShip() == NULL) &&
-                                    !pship->GetBaseHullType()->HasCapability(c_habmLifepod))
-                                {
-                                    IsideIGC*   pside = pship->GetSide();
+									if (((pside == psideMe) || pside->AlliedSides(pside, psideMe)) ||
+										(CanSee(pship) && SeenBySide(pside)) //#ALLY - friendly nearby (seen or can see us) IMAGO FIXED 7/10/09
+										)
+									{
+										cFriend++;
+										float d2 = (positionMe - pship->GetPosition()).LengthSquared();
+										if (d2 < d2Friend)
+											d2Friend = d2;
+									}
+									else if (CanSee(pship) && SeenBySide(pside))
+									{
+										cEnemy++;
+										float d2 = (positionMe - pship->GetPosition()).LengthSquared();
+										if (d2 < d2Enemy)
+											d2Enemy = d2;
+									}
+								}
+							}
 
-                                    if ((pside == psideMe) || 
-                                        (pside->AlliedSides(pside,psideMe) && CanSee(pship) && SeenBySide(pside)))
-                                    {
-                                        cFriend++;
-                                        float d2 = (positionMe - pship->GetPosition()).LengthSquared();
-                                        if (d2 < d2Friend)
-                                            d2Friend = d2;
-                                    }
-                                    else if (CanSee(pship) && SeenBySide(pside))
-                                    {
-                                        float d2 = (positionMe - pship->GetPosition()).LengthSquared();
-                                        bool threat = (d2 < 4000000.0f); //closer than 2000m
-                                        if (!threat && pship->GetVelocity().Length() > pship->GetHullType()->GetMaxSpeed()*0.65) {
-                                            Orientation oToMiner = Orientation(GetPosition() - pship->GetPosition());
-                                            float shipDirSpeed = oToMiner.CosForward(pship->GetVelocity())*pship->GetVelocity().Length();
-                                            if (shipDirSpeed > 0.7*pship->GetVelocity().Length()) // flying 70% to the miner
-                                                threat = true;
-                                        }
-                                        if (threat) {
-                                            cEnemy++;
-                                            if (d2 < d2Enemy)
-                                                d2Enemy = d2;
+							if (cFriend >= cEnemy)
+								bRunAway = false;
+							else
+							{
+								static const float  c_d2AlwaysRun = 1000.0f;
+								if (d2Enemy > c_d2AlwaysRun * c_d2AlwaysRun)
+									bRunAway = (d2Enemy < d2Friend);
+							}
+						}
+					}
+				}
 
-                                            // Check if it's a basic scout
-                                            const IhullTypeIGC* pht = pship->GetHullType();
-                                            enemyBasicScout = (pht->GetDefenseType() == 1 && // light armor
-                                                pht->GetScannerRange() > 2200.0f && pht->GetScannerRange() < 2950.0f);
-                                        }
-                                    }
-                                }
-                            }
-
-                            //debugf("%s, friends: %d, foes: %d\n", (enemyBasicScout ? "basicScout" : "-"), cFriend, cEnemy);
-
-                            if ((cFriend >= cEnemy) || (enemyBasicScout && cEnemy == cFriend + 1))
-                                bRunAway = false;
-                            else
-                            {
-                                static const float  c_d2AlwaysRun = 1000.0f;
-                                if (d2Enemy > c_d2AlwaysRun * c_d2AlwaysRun)
-                                    bRunAway = (d2Enemy < d2Friend);
-                            }*/
-                        }
-                    }
-                }
-
-                if (bRunAway)
-                {
-                    //We'd like to run ... are we running already?
-                    if (!m_bRunningAway)
-                    {
-                        //Not running ... we should be
-                        int ttMask = c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster;
-                        if (GetHullType()->GetCapabilities() & c_habmLandOnCarrier)
-                            ttMask |= c_ttShip;
-                        ImodelIGC*  pmodel = FindTarget(this, ttMask,
-                                                        NULL, NULL, NULL, NULL, c_sabmRepair);
-                        //but only if we can find some place to run to
+				if (bRunAway)
+				{
+					//We'd like to run ... are we running already?
+					if (!m_bRunningAway)
+					{
+						//Not running ... we should be
+						int ttMask = c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster;
+						if (GetHullType()->GetCapabilities() & c_habmLandOnCarrier)
+							ttMask |= c_ttShip;
+						ImodelIGC*  pmodel = FindTarget(this, ttMask,
+							NULL, NULL, NULL, NULL, c_sabmRepair);
+						//but only if we can find some place to run to
 						//mmf debuging code
 						// training mission 6 triggers this for GetName = Enemy Support
 						//if (!pmodel) {
@@ -1878,61 +1860,53 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
 						//mmf end debugging code
 
 						if (pmodel)
-                        {
-                            SetCommand(c_cmdPlan, pmodel, c_cidGoto);
+						{
+							SetCommand(c_cmdPlan, pmodel, c_cidGoto);
 
-                            if (m_pilotType == c_ptBuilder)
-                                GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                                                       constructorRunningSound, "Constructor heading for cover.");
-                            else if (bDamage)
-                                GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                                                       droneTooMuchDamageSound, "Forget this. I have to go get repaired.");
-                            else
-                                GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                                                       droneEnemyOnScopeSound, "Enemy spotted; returning to base.");
+							if (m_pilotType == c_ptBuilder)
+								GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
+									constructorRunningSound, "Constructor heading for cover.");
+							else if (bDamage)
+								GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
+									droneTooMuchDamageSound, "Forget this. I have to go get repaired.");
+							else
+								GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
+									droneEnemyOnScopeSound, "Enemy spotted; returning to base.");
 
-                            //Set m_bRunningAway after the SetCommand (which clears it)
-                            m_bRunningAway = true;
-                            m_timeRanAway = timeStop;
+							//Set m_bRunningAway after the SetCommand (which clears it)
+							m_bRunningAway = true;
+							m_timeRanAway = timeStop;
 
-                            // Check if we should still run away in 10 seconds
-                            m_dtCheckRunaway = 10.0f;
-
-						    //mmf debuging code
-						    //debugf("mmf Miner/con found place to run to.\n");
+							//mmf debuging code
+							//debugf("mmf Miner/con found place to run to.\n");
 							//debugf("%-20s %x I am at %f %f %f\n", GetName(), timeStop.clock(), positionMe.x, positionMe.y, positionMe.z);
 							//debugf("running to %f %f %f\n",pmodel->GetPosition().x,pmodel->GetPosition().y,pmodel->GetPosition().z);
-						    //mmf end debugging code
+							//mmf end debugging code
 						}
-                    }
-                }
-                else if (m_bRunningAway)
-                {
-                    //We want to stop running
-                    if (m_pilotType == c_ptMiner && m_commandTargets[c_cmdAccepted] && m_commandTargets[c_cmdAccepted]->GetCluster() != GetCluster()) {
-                        // If we ran too far (especially IC miner after ripping), check for the best thing to do, instead of continuing the previous
-                        SetCommand(c_cmdAccepted, NULL, c_cidNone); //Also sets c_cmdPlan
-                    }
-                    else
-                        SetCommand(c_cmdPlan, NULL, c_cidNone);
+					}
+				}
+				else if (m_bRunningAway)
+				{
+					//We want to stop running
+					SetCommand(c_cmdPlan, NULL, c_cidNone);
 					// debugf("mmf %-20s stoped running\n", GetName());
-                    assert (m_bRunningAway == false);   //Set by SetCommand
-                    m_timeRanAway = timeStop;
-                }
-            }
+					assert(m_bRunningAway == false);   //Set by SetCommand
+					m_timeRanAway = timeStop;
+				}
+			}
 
-            if (!LegalCommand(m_commandIDs[c_cmdPlan], m_commandTargets[c_cmdPlan]))
-            {
-                if (LegalCommand(m_commandIDs[c_cmdAccepted], m_commandTargets[c_cmdAccepted]))
-                {
-                    //No current target and our accepted order makes sense ... do it instead
-                    SetCommand(c_cmdPlan, m_commandTargets[c_cmdAccepted], m_commandIDs[c_cmdAccepted]);
-                }
-                else
-                {
-                    PickDefaultOrder(pcluster, positionMe, false);
-                }
-            }
+			if (!LegalCommand(m_commandIDs[c_cmdPlan], m_commandTargets[c_cmdPlan]))
+			{
+				if (LegalCommand(m_commandIDs[c_cmdAccepted], m_commandTargets[c_cmdAccepted]))
+				{
+					//No current target and our accepted order makes sense ... do it instead
+					SetCommand(c_cmdPlan, m_commandTargets[c_cmdAccepted], m_commandIDs[c_cmdAccepted]);
+				}
+				else
+				{
+					PickDefaultOrder(pcluster, positionMe, false);
+				}
+			}
 
             if (m_pilotType == c_ptMiner)
             {

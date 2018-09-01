@@ -3372,8 +3372,6 @@ class IshipIGC : public IscannerIGC
         virtual bool                LegalCommand(CommandID   cid,
                                                  ImodelIGC*  pmodel) const = 0;
 
-        virtual void                SetRunawayCheckCooldown(float dtRunAway) = 0;
-
         virtual IshipIGC*           GetAutoDonate(void) const = 0;
         virtual void                SetAutoDonate(IshipIGC* pship) = 0;
 
