@@ -1886,12 +1886,12 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
 
 		virtual void MarkPreviouslySpotted(void)
 		{
-            m_timePreviouslySpotted = GetMyLastUpdate();
+			m_previouslySpotted = true;
 		}
 
-		virtual bool RecentlySpotted(void) const
+		virtual bool PreviouslySpotted(void) const
 		{
-            return (GetMyLastUpdate() - m_timePreviouslySpotted < 50.0f);
+			return m_previouslySpotted;
 		}
 		virtual float GetRepair(void) const
 		{
@@ -2666,7 +2666,7 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
         
 		float				m_repair; //Xynth amount of nanning performed by ship
 		AchievementMask		m_achievementMask;
-		Time				m_timePreviouslySpotted;
+		bool				m_previouslySpotted;
 
 };
 

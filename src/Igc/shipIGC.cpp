@@ -197,7 +197,7 @@ HRESULT     CshipIGC::Initialize(ImissionIGC* pMission, Time now, const void* da
     m_wingmanBehaviour = c_wbbmUseMissiles | c_wbbmRunAt60Hull;
 	m_repair = 0; //Xynth amount of nanning performed by ship
 	m_achievementMask = 0;
-	m_timePreviouslySpotted = 0;
+	m_previouslySpotted = false; //Xynth if this ship has been spotted
     
 	return S_OK;
 }

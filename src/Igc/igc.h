@@ -3394,7 +3394,7 @@ class IshipIGC : public IscannerIGC
 		virtual void				ClearAchievementMask(void) = 0;
 		virtual AchievementMask		GetAchievementMask(void) const = 0;
 		virtual void				MarkPreviouslySpotted(void) = 0;
-		virtual bool				RecentlySpotted(void) const = 0;
+		virtual bool				PreviouslySpotted(void) const = 0;
         virtual DamageTrack*        GetDamageTrack(void) = 0;
         virtual void                CreateDamageTrack(void) = 0;
         virtual void                DeleteDamageTrack(void) = 0;
@@ -5540,7 +5540,7 @@ class PlayerScoreObject
             m_cPlayerKills = 0.0f;
             m_cBaseKills = 0.0f;
             m_cBaseCaptures = 0.0f;
-            m_cHighValueTargetsSpotted = 0;
+			m_cProbeSpot = 0;
 			m_cRepair = 0;
 
             m_cRescues = 0;
@@ -5653,14 +5653,11 @@ class PlayerScoreObject
             m_cAsteroidsSpotted++;
         }
 
-		void	AddTargetSpot(void)
+		void	AddProbeSpot(void)
 		{
-            m_cHighValueTargetsSpotted++;
+			m_cProbeSpot++;
 		}
-        short   GetTargetsSpotted(void)
-        {
-            return m_cHighValueTargetsSpotted;
-        }
+
 		void	SetRepair(float repair)
 		{
 			m_cRepair = repair;
@@ -5928,7 +5925,7 @@ class PlayerScoreObject
         float                       m_cPlayerKills;
         float                       m_cBaseKills;
         float                       m_cBaseCaptures;
-		short						m_cHighValueTargetsSpotted;
+		short						m_cProbeSpot;
 		float						m_cRepair;
 
         short                       m_cTechsRecovered;
