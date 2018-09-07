@@ -354,79 +354,64 @@ bool  FindableModel(ImodelIGC*          m,
 
 static bool IsFriendlyCluster(IclusterIGC*  pcluster, IsideIGC* pside)
 {
-    /*StationLinkIGC* psl = pcluster->GetStations()->first();
-    if (psl == NULL)
-        return false;                   //No stations == unfriendly
+	StationLinkIGC* psl = pcluster->GetStations()->first();
+	if (psl == NULL)
+		return false;                   //No stations == unfriendly
 
-    bool    rc = false;
-    do
-    {
-        IstationIGC*    ps = psl->data();
-        if ((!ps->GetStationType()->HasCapability(c_sabmPedestal)) &&
-            ps->SeenBySide(pside))
-        {
+	bool    rc = false;
+	do
+	{
+		IstationIGC*    ps = psl->data();
+		if ((!ps->GetStationType()->HasCapability(c_sabmPedestal)) &&
+			ps->SeenBySide(pside))
+		{
 			if ((pside != ps->GetSide()) && !IsideIGC::AlliedSides(pside, ps->GetSide()))		// #ALLY FIXED 7/10/09 imago - was: pside != ps->GetSide(
-                return false;               //enemy has a station == unfriendly
+				return false;               //enemy has a station == unfriendly
 
-            rc = true;
-        }
+			rc = true;
+		}
 
-        psl = psl->next();
-    }
-    while (psl != NULL);
+		psl = psl->next();
+	} while (psl != NULL);
 	//It has stations but no enemy stations ... therefore at least one friendly station
 
 	// mmf 10/07 controversial change, enable it with Experimental game type
 	ImissionIGC*         pmission = pside->GetMission();  // mmf 10/07 added so we can get at bExperimental game type
-    const MissionParams* pmp = pmission->GetMissionParams(); // mmf 10/07
+	const MissionParams* pmp = pmission->GetMissionParams(); // mmf 10/07
 
 	if (!(pmp->bExperimental)) {
-	  return rc; // mmf 10/07 orig code
+		return rc; // mmf 10/07 orig code
 	}
-    // mmf else if Experimental game type fall through to yp's code*/
-
-    bool rc = pside->IsTerritory(pcluster);
-
+	// mmf else if Experimental game type fall through to yp's code
 	// yp: Improving AI: no reason to check further if we already know its a hostile sector
-	if(rc == false)
+	if (rc == false)
 		return rc;
-
 	// we should also check to see if there is a lot of enemy in the sector.
 	// we wouldnt want to go somewhere hostile even if we do have a base there.
-	if(pcluster->GetShips() != NULL)
+	if (pcluster->GetShips() != NULL)
 	{
 		int friendlyShipCount = 0;
 
-		for (ShipLinkIGC*   psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next())
-        {
-            IshipIGC*   pship = psl->data();
-			// If our team knows that ship is there, then we can count it.
-            if (pship->SeenBySide(pside))
+		for (ShipLinkIGC* psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next()) // mmf changed this to pcluste->GetShips from pside
+		{
+			IshipIGC*   pship = psl->data();
+			// If our team knows that ship is there or its one of our ships, then we can count it.
+			if (pship->SeenBySide(pside) || pship->GetSide() == pside)
 			{
-                PilotType pt = pship->GetPilotType();
-				if ((pside != pship->GetSide()) && !IsideIGC::AlliedSides(pside,pship->GetSide()))
+				//if (pside != pship->GetSide()) // if its not our side then we subtract 1 from our count
+				if ((pside != pship->GetSide()) && !IsideIGC::AlliedSides(pside, pship->GetSide())) //#ALLY -was: line above IMAGO FIXED LIKE THIS ALL OVER 7/8/09
 				{// count hostiles in the system.
-                    //Different weights for pilot types
-                    if (pt == c_ptCarrier)
-                        friendlyShipCount -= 6;
-                    else if (pt >= c_ptPlayer || pt == c_ptWingman)
-                        friendlyShipCount -= 2;
-                    else
-					    friendlyShipCount--;
+					// TODO: Make smarter: Assign differnt ship hulls a differnt amount of points, could also handle drones differntly
+					friendlyShipCount--;
 				}
 				else//, otherwise we increment it.
 				{// count friendlys in the system.
-                    if (pt == c_ptCarrier)
-                        friendlyShipCount += 2;
-                    else if (pt >= c_ptPlayer || pt == c_ptWingman)
-                        friendlyShipCount += 2;
-                    else
-                        friendlyShipCount++;
+					friendlyShipCount++;
 				}
 			}
-        }
+		}
 
-		if(friendlyShipCount>=0)// do we have a good chance of being safe?
+		if (friendlyShipCount >= 0)// do we have a good chance of being safe?
 		{
 			rc = true; // to do this...
 		}
@@ -435,9 +420,9 @@ static bool IsFriendlyCluster(IclusterIGC*  pcluster, IsideIGC* pside)
 			rc = false;
 		}
 	}
-    // yp end
+	// yp end
 
-    return rc;
+	return rc;
 }
 
 struct  ClusterPosition
@@ -689,9 +674,9 @@ ImodelIGC*  FindTarget(IshipIGC*           pship,
                             //Have we visited pclusterOther?
                             if (clustersVisited.find(pclusterOther) == NULL)
                             {
-                                //No
-                                if (((ttMask & c_ttCowardly) == 0) || IsFriendlyCluster(pclusterOther, pside))
-                                    pwlTwoAway->last(pwarpDestination);
+								//No
+								if (((ttMask & c_ttCowardly) == 0) || pside->IsTerritory(pclusterOther))
+									pwlTwoAway->last(pwarpDestination);
                             }
                         }
                     }
