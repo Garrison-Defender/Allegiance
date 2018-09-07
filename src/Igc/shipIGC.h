@@ -1947,22 +1947,17 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
                         }
                     }
 
-                    if (cEnemy == 0 || cFriend > cEnemy)
-                        return true;
-                    else if (cFriend == cEnemy) {
-                        static const float  c_d2AlwaysRun = 2300.0f;
-                        static const float  c_d2SafeishDist = 3000.0f;
-                        if ((d2Enemy > c_d2AlwaysRun * c_d2AlwaysRun) &&
-                            ((d2Enemy >= d2Friend) || (d2Enemy > c_d2SafeishDist * c_d2SafeishDist)))
-                        {
-                            return true;
-                        }
-                    }
-                    else if (cFriend == cEnemy - 1) {
-                        static const float  c_d2IgnoreDist = 4000.0f;
-                        if (d2Enemy > c_d2IgnoreDist * c_d2IgnoreDist)
-                            return true;
-                    }
+					if (cFriend >= cEnemy)
+						return true;
+					else
+					{
+						static const float  c_d2AlwaysRun = 1000.0f;
+						if ((d2Enemy > c_d2AlwaysRun * c_d2AlwaysRun) &&
+							(d2Enemy >= d2Friend))
+						{
+							return true;
+						}
+					}
                 }
 
                 SetMyLastUpdate(now);
@@ -2209,43 +2204,26 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
         //    return pstationToHide;
         //}
 
-        bool                PickDefaultOrder(IclusterIGC*   pcluster,
-                                             const Vector&  position,
-                                             bool           bDocked)
-        {
-            //m_dtCheckRunaway = 5.0f; // Be ready to run after making up a command
-            
-            bool fGaveOrder = false;
+		bool                PickDefaultOrder(IclusterIGC*   pcluster,
+			const Vector&  position,
+			bool           bDocked)
+		{
+			bool fGaveOrder = false;
 
-            //No orders ... pick something
-            switch (m_pilotType)
-            {
+			//No orders ... pick something
+			switch (m_pilotType)
+			{
 			case c_ptMiner:
 			{
 				float   capacity = GetMyMission()->GetFloatConstant(c_fcidCapacityHe3) *
 					GetSide()->GetGlobalAttributeSet().GetAttribute(c_gaMiningCapacity);
 				if (m_fOre < capacity / 2.0f)
 				{
-					ImodelIGC*  pmodel = NULL;
-
-					// Check if there is a player command we should be continuing
-					if (m_commandTargets[c_cmdQueued] && m_commandIDs[c_cmdQueued] == c_cidDefault) {
-						IclusterIGC* pcommandCluster = (IclusterIGC*)(m_commandTargets[c_cmdQueued]);
-						assert(pcommandCluster);
-						pmodel = FindTarget(this,
-							c_ttNeutral | c_ttAsteroid | c_ttNearest |
-							c_ttLeastTargeted | c_ttCowardly,
-							NULL, pcommandCluster, &Vector(0.0f, 0.0f, 0.0f), NULL,
-							m_abmOrders);
-						if (!pmodel) //don't remember the cluster after it's been mined out
-							SetCommand(c_cmdQueued, NULL, c_cidNone);
-					}
-					if (!pmodel)
-						pmodel = FindTarget(this,
-							c_ttNeutral | c_ttAsteroid | c_ttNearest |
-							c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
-							NULL, pcluster, &position, NULL,
-							m_abmOrders);
+					ImodelIGC*  pmodel = FindTarget(this,
+						c_ttNeutral | c_ttAsteroid | c_ttNearest |
+						c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
+						NULL, pcluster, &position, NULL,
+						m_abmOrders);
 
 					if (pmodel)
 					{
@@ -2258,21 +2236,12 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
 				{
 					ImodelIGC*  pmodel = NULL;
 
-					if (m_fOre > 0.0f) {
-						pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster | c_ttCowardly,
+					if (m_fOre > 0.0f)
+						pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
 							NULL, pcluster, &position, NULL,
 							c_sabmUnload);
-						if (!pmodel) //no safe station available
-							pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
-								NULL, pcluster, &position, NULL,
-								c_sabmUnload);
-					}
 
 					if (pmodel == NULL)
-						pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster | c_ttCowardly,
-							NULL, pcluster, &position, NULL,
-							c_sabmLand);
-					if (!pmodel)
 						pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
 							NULL, pcluster, &position, NULL,
 							c_sabmLand);
@@ -2286,82 +2255,78 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
 			}
 			break;
 
-                case c_ptBuilder:
-                {
-                    if ((m_abmOrders == c_aabmBuildable) && !bDocked)
-                        break;
+			case c_ptBuilder:
+			{
+				if ((m_abmOrders == c_aabmBuildable) && !bDocked)
+					break;
 
-                    ImodelIGC*  pmodel = FindTarget(this,
-                                                    c_ttNeutral | c_ttAsteroid | c_ttNearest |
-                                                    c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
-                                                    NULL, pcluster, &position, NULL,
-                                                    m_abmOrders);
+				ImodelIGC*  pmodel = FindTarget(this,
+					c_ttNeutral | c_ttAsteroid | c_ttNearest |
+					c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
+					NULL, pcluster, &position, NULL,
+					m_abmOrders);
 
-                    if (pmodel)
-                    {
-                        assert (m_pbaseData);
+				if (pmodel)
+				{
+					assert(m_pbaseData);
 
-                        CommandID   cid = (m_abmOrders != c_aabmBuildable) ? c_cidBuild : c_cidGoto;
+					CommandID   cid = (m_abmOrders != c_aabmBuildable) ? c_cidBuild : c_cidGoto;
 
-                        SetCommand(c_cmdAccepted, pmodel, cid);
-                        fGaveOrder = true;
-                        if (cid == c_cidBuild)
-                            GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                                                    droneInTransitSound,
-                                                                    "Building %s at %s",
-                                                                    ((IstationTypeIGC*)(IbaseIGC*)m_pbaseData)->GetName(),
-                                                                    GetModelName(pmodel));
-                    }
-                }
-                break;
+					SetCommand(c_cmdAccepted, pmodel, cid);
+					fGaveOrder = true;
+					if (cid == c_cidBuild)
+						GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+							droneInTransitSound,
+							"Building %s at %s",
+							((IstationTypeIGC*)(IbaseIGC*)m_pbaseData)->GetName(),
+							GetModelName(pmodel));
+				}
+			}
+			break;
 
-                case c_ptLayer:
-                {
-                    if (!bDocked)
-                        break;
+			case c_ptLayer:
+			{
+				if (!bDocked)
+					break;
 
-                    ImodelIGC*  pmodel = FindTarget(this,
-                                                    c_ttNeutral | c_ttAsteroid | c_ttNearest |
-                                                    c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
-                                                    NULL, pcluster, &position, NULL,
-                                                    0);
+				ImodelIGC*  pmodel = FindTarget(this,
+					c_ttNeutral | c_ttAsteroid | c_ttNearest |
+					c_ttLeastTargeted | c_ttAnyCluster | c_ttCowardly,
+					NULL, pcluster, &position, NULL,
+					0);
 
-                    if (pmodel)
-                    {
-                        SetCommand(c_cmdAccepted, pmodel, c_cidGoto);
-                        fGaveOrder = true;
-                    }
-                }
-                break;
+				if (pmodel)
+				{
+					SetCommand(c_cmdAccepted, pmodel, c_cidGoto);
+					fGaveOrder = true;
+				}
+			}
+			break;
 
-                case c_ptWingman:
-                {
-                    fGaveOrder = GetMyMission()->GetIgcSite()->HandlePickDefaultOrder(this); // for training missions / co-op
+			case c_ptWingman:
+			{
+				ImodelIGC*  pmodel = FindTarget(this,
+					c_ttEnemy | c_ttShip | c_ttNearest,
+					NULL, pcluster, &position, NULL, 0);
 
-                    if (!fGaveOrder) {
-                        ImodelIGC*  pmodel = FindTarget(this,
-                            c_ttEnemy | c_ttShip | c_ttNearest,
-                            NULL, pcluster, &position, NULL, 0);
+				if (pmodel)
+				{
+					SetCommand(c_cmdAccepted, pmodel, c_cidAttack);
+					fGaveOrder = true;
+					GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+						droneInTransitSound,
+						"Attacking %s", GetModelName(pmodel));
+				}
+			}
+			break;
+			}
 
-                        if (pmodel)
-                        {
-                            SetCommand(c_cmdAccepted, pmodel, c_cidAttack);
-                            fGaveOrder = true;
-                            GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                droneInTransitSound,
-                                "Attacking %s", GetModelName(pmodel));
-                        }
-                    }
-                }
-                break;
-            }
+			if (!fGaveOrder)
+				SetCommand(c_cmdAccepted, NULL, c_cidNone);
 
-            if (!fGaveOrder)
-                SetCommand(c_cmdAccepted, NULL, c_cidNone);
-              
 
-            return (m_commandIDs[c_cmdAccepted] != c_cidNone);
-        }
+			return (m_commandIDs[c_cmdAccepted] != c_cidNone);
+		}
 
         bool    IsGhost(void) const
         {

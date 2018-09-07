@@ -2176,30 +2176,21 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
                 float   minedOre = dT * ga.GetAttribute(c_gaMiningRate);
                 float   capacity = GetMyMission()->GetFloatConstant(c_fcidCapacityHe3) * ga.GetAttribute(c_gaMiningCapacity);
 
-                if (m_fOre + minedOre >= capacity)
-                {
-                    minedOre = capacity - m_fOre;
-                    {
-                        ImodelIGC*  pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster | c_ttCowardly,
-                                                        NULL, NULL, NULL, NULL, c_sabmUnload);
-                        if (!pmodel) //no safe station available
-                            pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
-                                NULL, NULL, NULL, NULL, c_sabmUnload);
+				if (m_fOre + minedOre >= capacity)
+				{
+					minedOre = capacity - m_fOre;
+					{
+						ImodelIGC*  pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
+							NULL, NULL, NULL, NULL, c_sabmUnload);
 
-                        if (pmodel) {
-                            if (pasteroid->GetOre() < capacity * 0.5f) {        //Don't reserve the rock and go back, if it's almost mined out
-                                SetCommand(c_cmdAccepted, pmodel, c_cidGoto);   // Also sets c_cmdCurrent and c_cmdPlan
-                            }
-                            else
-                                SetCommand(c_cmdPlan, pmodel, c_cidGoto);       // c_cmdAccepted unchanged - will come back
-                        }
-                        //If we can't find a place to unload ... stick around here for lack of a better place to go
-
+						//If we can't find a place to unload ... stick around here for lack of a better place to go
+						if (pmodel)
+							SetCommand(c_cmdPlan, pmodel, c_cidGoto);
 						// mmf added else and debugf
 						// else debugf("mmf %-20s no place to unload staying here, I am at %f %f %f\n",
 						// 						GetName(), GetPosition().x, GetPosition().y, GetPosition().z);
-                    }
-                }
+					}
+				}
 
                 float   actualOre = pasteroid->MineOre(minedOre);
                 m_fOre += actualOre;
