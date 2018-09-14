@@ -5870,7 +5870,10 @@ HRESULT FedSrvSiteBase::OnAppMessage(FedMessaging * pthis, CFMConnection & cnxnF
         pqd->dwConnectionID = cnxnFrom.GetID();
 
 		// BT - STEAM
-		if (g.bEnforceSteamDRM == true)
+		if (g.bEnforceSteamDRM == true
+			// If the user's CDKey matches the botAuthenticationGUID from the registry, then this login is a bot, so we can bypass all 
+			// the steam security.
+			&& strcmp(pqd->szCDKey, g.szBotAuthenticationGuid) != 0)
 		{
 			Strcpy(pqd->szDrmHash, pfmLogon->drmHash);
 			pqd->steamID = pfmLogon->steamID;
